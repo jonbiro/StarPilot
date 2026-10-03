@@ -436,6 +436,10 @@ class Soundd:
               float(getattr(self.starpilot_toggles, "turn_steering_limit_mute_speed", 0.0)),
             ):
               self.current_volume = 0.0
+            elif self.current_alert == AudibleAlert.preAlert:
+              self.current_volume = self.get_volume_override()
+              if self.current_volume == 1.01:
+                self.current_volume = self.auto_volume
             elif self.starpilot_toggles.alert_volume_controller:
               self.current_volume = self.get_volume_override()
               if self.current_volume == 1.01:
@@ -475,7 +479,9 @@ class Soundd:
       AudibleAlert.promptRepeat: self.starpilot_toggles.prompt_volume / 100.0,
       AudibleAlert.promptDistracted: self.starpilot_toggles.promptDistracted_volume / 100.0,
 
-      AudibleAlert.preAlert: self.starpilot_toggles.promptDistracted_volume / 100.0,
+      # Keep the initial driver-distraction chime independently configurable so it can
+      # be gentle without reducing the escalated distracted-driver warning.
+      AudibleAlert.preAlert: self.starpilot_toggles.driver_prealert_volume / 100.0,
 
       AudibleAlert.warningSoft: self.starpilot_toggles.warningSoft_volume / 100.0,
       AudibleAlert.warningImmediate: self.starpilot_toggles.warningImmediate_volume / 100.0,

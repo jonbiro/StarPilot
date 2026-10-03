@@ -340,6 +340,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"DownloadAllModels", {CLEAR_ON_MANAGER_START, BOOL, "0", "0"}},
     {"DownloadMaps", {CLEAR_ON_MANAGER_START, BOOL, "0", "0"}},
     {"DriverCamera", {PERSISTENT, BOOL, "0", "0", 1, SETTINGS_SIMPLE}},
+    {"DriverPreAlertVolume", {PERSISTENT, INT, "25", "25", 2, SETTINGS_SIMPLE}},
     {"ActiveBigModel", {PERSISTENT, STRING}},
     {"ActiveBigModelName", {PERSISTENT, STRING}},
     {"ActiveBigModelVersion", {PERSISTENT, STRING}},

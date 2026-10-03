@@ -3190,6 +3190,17 @@
         "settings_tier": "simple"
       },
       {
+        "key": "DriverPreAlertVolume",
+        "label": "Driver Attention Pre-Alert Volume",
+        "description": "Set the volume for the initial \"Pay Attention\" chime. This does not change driver-distraction detection, escalation timing, terminal warnings, or lockout behavior.",
+        "data_type": "int",
+        "ui_type": "numeric",
+        "min": 10.0,
+        "max": 101.0,
+        "step": 1.0,
+        "settings_tier": "simple"
+      },
+      {
         "key": "PromptDistractedVolume",
         "label": "Prompt Distracted Volume",
         "description": "Set the volume for prompts when openpilot detects driver distraction or unresponsiveness.\n\nExamples include: \"Pay Attention\", \"Touch Steering Wheel\".",
