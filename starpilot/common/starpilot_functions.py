@@ -119,6 +119,8 @@ def register_device(build_metadata, params):
     return
 
   def register_thread():
+    if params.get_bool("OfflinePrivacyMode"):
+      return
     dongle_id = params.get("DongleId")
     if isinstance(dongle_id, bytes):
       dongle_id = dongle_id.decode("utf-8", errors="ignore")
@@ -132,7 +134,12 @@ def register_device(build_metadata, params):
       params.put("StarPilotDongleId", dongle_id)
 
     while not is_url_pingable(STARPILOT_API):
+      if params.get_bool("OfflinePrivacyMode"):
+        return
       time.sleep(60)
+
+    if params.get_bool("OfflinePrivacyMode"):
+      return
 
     payload = {
       "api_token": params.get("StarPilotApiToken"),
