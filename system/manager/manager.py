@@ -1073,7 +1073,7 @@ def manager_init() -> None:
   # set dongle id. Offline privacy mode deliberately avoids registration/auth traffic.
   offline_privacy = params.get_bool("OfflinePrivacyMode")
   if offline_privacy:
-    dongle_id = params.get("DongleId") or UNREGISTERED_DONGLE_ID
+    dongle_id = params.get("DongleId", encoding="utf-8") or UNREGISTERED_DONGLE_ID
     if params.get("DongleId") is None:
       params.put("DongleId", dongle_id)
     cloudlog.info("Offline privacy mode: skipping device registration")
