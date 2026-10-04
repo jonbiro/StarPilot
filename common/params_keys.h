@@ -9,6 +9,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"AccessToken", {CLEAR_ON_MANAGER_START | DONT_LOG, STRING}},
     {"AdbEnabled", {PERSISTENT, BOOL}},
     {"AlwaysAllowUploads", {PERSISTENT, BOOL, "0", std::nullopt, 0, SETTINGS_SIMPLE}},
+    {"OfflinePrivacyMode", {PERSISTENT, BOOL, "1", "1", 2, SETTINGS_SIMPLE}},
     {"AlwaysOnDM", {PERSISTENT, BOOL}},
     {"ApiCache_Device", {PERSISTENT, STRING}},
     {"AssistNowToken", {PERSISTENT, STRING}},
