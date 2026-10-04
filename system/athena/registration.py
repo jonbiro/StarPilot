@@ -36,9 +36,10 @@ def register(show_spinner=False, register_konik=False) -> str | None:
   """
   params = Params()
 
-  if params.get_bool("OfflinePrivacyMode") and not register_konik:
+  if params.get_bool("OfflinePrivacyMode"):
     cloudlog.info("Offline privacy mode: registration request disabled")
-    return params.get("DongleId") or UNREGISTERED_DONGLE_ID
+    key = "KonikDongleId" if register_konik else "DongleId"
+    return params.get(key) or UNREGISTERED_DONGLE_ID
 
   dongle_id: str | None = params.get("DongleId")
   if dongle_id is None and Path(Paths.persist_root()+"/comma/dongle_id").is_file():
