@@ -7,7 +7,7 @@ from openpilot.selfdrive.monitoring.policy import DriverMonitoring, DRIVER_MONIT
 EventName = log.OnroadEvent.EventName
 dm_settings = DRIVER_MONITOR_SETTINGS()
 
-TEST_TIMESPAN = 120  # seconds
+TEST_TIMESPAN = 300  # seconds, extended for lenient ~80/120s red timeouts
 DISTRACTED_SECONDS_TO_ORANGE = dm_settings._VISION_POLICY_ALERT_2_TIMEOUT + 1
 DISTRACTED_SECONDS_TO_RED = dm_settings._VISION_POLICY_ALERT_3_TIMEOUT + 1
 INVISIBLE_SECONDS_TO_ORANGE = dm_settings._WHEELTOUCH_POLICY_ALERT_2_TIMEOUT + 1
@@ -110,20 +110,22 @@ class TestMonitoring:
                     (TEST_TIMESPAN - 10 - s._VISION_POLICY_ALERT_3_TIMEOUT) / 2) / DT_DMON)] == 3
     assert isinstance(d_status.awareness, float)
 
-  # engaged, distracted past red and beyond the no-response window -> unavailability response + lockout
+  # engaged, distracted past red and beyond the no-response window -> lenient: single episode must NOT lockout
+  # lockout now needs 10x red or 5x no-response
   def test_distracted_lockout(self):
     alert_lvls, d_status = self._run_seq(always_distracted, always_false, always_true, always_false)
     assert alert_lvls[int(DISTRACTED_SECONDS_TO_RED / DT_DMON)] == 3
-    assert d_status.lockout_active
-    assert d_status.lockout_time_elapsed > 0
-    assert d_status.lockout_count >= 1
+    assert d_status.alert_3_cnt >= 1
+    assert d_status.no_response_cnt >= 1
+    assert not d_status.lockout_active
+    assert d_status.lockout_count == 0
 
-  # no face -> wheeltouch red, sustained past the no-response timeout -> unavailability response + lockout
+  # no face -> wheeltouch red, sustained past the no-response timeout -> lenient: single episode must NOT lockout
   def test_invisible_lockout(self):
     _, d_status = self._run_seq(always_no_face, always_false, always_true, always_false)
     assert d_status.active_policy == log.DriverMonitoringState.MonitoringPolicy.wheeltouch
-    assert d_status.lockout_active
-    assert d_status.lockout_count >= 1
+    assert not d_status.lockout_active
+    assert d_status.lockout_count == 0
 
   # engaged, no face detected the whole time, no action
   def test_fully_invisible_driver(self):
@@ -158,29 +160,32 @@ class TestMonitoring:
   # engaged, down to orange, driver dodges camera, then comes back still distracted, down to red, \
   #                          driver dodges, and then touches wheel to no avail, disengages and reengages
   #  - orange/red alert should remain after disappearance, and only disengaging clears red
+  #  - lenient timeouts: second dodge starts 6s after red (solid red, past freeze transients)
   def test_biggest_comma_fan(self):
     _invisible_time = 2  # seconds
+    _gap2_start = DISTRACTED_SECONDS_TO_RED + 6
     ds_vector = always_distracted[:]
     interaction_vector = always_false[:]
     op_vector = always_true[:]
     ds_vector[int(DISTRACTED_SECONDS_TO_ORANGE/DT_DMON):int((DISTRACTED_SECONDS_TO_ORANGE+_invisible_time)/DT_DMON)] \
                                                         = [msg_NO_FACE_DETECTED] * int(_invisible_time/DT_DMON)
-    ds_vector[int((DISTRACTED_SECONDS_TO_RED+_invisible_time)/DT_DMON):int((DISTRACTED_SECONDS_TO_RED+2*_invisible_time)/DT_DMON)] \
+    ds_vector[int(_gap2_start/DT_DMON):int((_gap2_start+_invisible_time)/DT_DMON)] \
                                                         = [msg_NO_FACE_DETECTED] * int(_invisible_time/DT_DMON)
-    interaction_vector[int((DISTRACTED_SECONDS_TO_RED+2*_invisible_time+0.5)/DT_DMON):int((DISTRACTED_SECONDS_TO_RED+2*_invisible_time+1.5)/DT_DMON)] \
+    interaction_vector[int((_gap2_start+_invisible_time+0.5)/DT_DMON):int((_gap2_start+_invisible_time+1.5)/DT_DMON)] \
                                                         = [True] * int(1/DT_DMON)
-    op_vector[int((DISTRACTED_SECONDS_TO_RED+2*_invisible_time+2.5)/DT_DMON):int((DISTRACTED_SECONDS_TO_RED+2*_invisible_time+3)/DT_DMON)] \
+    op_vector[int((_gap2_start+_invisible_time+2.5)/DT_DMON):int((_gap2_start+_invisible_time+3)/DT_DMON)] \
                                                         = [False] * int(0.5/DT_DMON)
     alert_lvls, _ = self._run_seq(ds_vector, interaction_vector, op_vector, always_false)
     assert alert_lvls[int((DISTRACTED_SECONDS_TO_ORANGE+0.5*_invisible_time)/DT_DMON)] == 2
-    assert alert_lvls[int((DISTRACTED_SECONDS_TO_RED+1.5*_invisible_time)/DT_DMON)] == 3
-    assert alert_lvls[int((DISTRACTED_SECONDS_TO_RED+2*_invisible_time+1.5)/DT_DMON)] == 3
-    assert alert_lvls[int((DISTRACTED_SECONDS_TO_RED+2*_invisible_time+3.5)/DT_DMON)] == 0
+    assert alert_lvls[int((_gap2_start+0.5*_invisible_time)/DT_DMON)] == 3
+    assert alert_lvls[int((_gap2_start+_invisible_time+1.5)/DT_DMON)] == 3
+    assert alert_lvls[int((_gap2_start+_invisible_time+3.5)/DT_DMON)] == 0
 
   # engaged, invisible driver, down to orange, driver touches wheel; then down to orange again, driver appears
   #  - both actions should clear the alert, but momentary appearance should not
+  #  - lenient timeouts need a longer appearance (40s) to fully recharge vs stock 10s
   def test_sometimes_transparent_commuter(self):
-    for _visible_time in (0.5, 10):
+    for _visible_time in (0.5, 40):
       ds_vector = always_no_face[:]*2
       interaction_vector = always_false[:]*2
       ds_vector[int((2*INVISIBLE_SECONDS_TO_ORANGE+1)/DT_DMON):int((2*INVISIBLE_SECONDS_TO_ORANGE+1+_visible_time)/DT_DMON)] = \
@@ -193,7 +198,7 @@ class TestMonitoring:
       if _visible_time == 0.5:
         assert alert_lvls[int((INVISIBLE_SECONDS_TO_ORANGE*2+1-0.1)/DT_DMON)] == 2
         assert alert_lvls[int((INVISIBLE_SECONDS_TO_ORANGE*2+1+0.1+_visible_time)/DT_DMON)] == 2
-      elif _visible_time == 10:
+      elif _visible_time == 40:
         assert alert_lvls[int((INVISIBLE_SECONDS_TO_ORANGE*2+1-0.1)/DT_DMON)] == 2
         assert alert_lvls[int((INVISIBLE_SECONDS_TO_ORANGE*2+1+0.1+_visible_time)/DT_DMON)] == 0
 
