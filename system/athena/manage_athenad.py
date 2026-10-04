@@ -34,7 +34,13 @@ def main():
       cloudlog.info("starting athena daemon")
       proc = Process(name='athenad', target=launcher, args=('system.athena.athenad', 'athenad'))
       proc.start()
-      proc.join()
+      while proc.is_alive():
+        if params.get_bool("OfflinePrivacyMode"):
+          cloudlog.info("Offline privacy mode enabled: stopping Athena daemon")
+          proc.terminate()
+          proc.join(timeout=5)
+          return
+        proc.join(timeout=1)
       cloudlog.event("athenad exited", exitcode=proc.exitcode)
       time.sleep(5)
   except Exception:
