@@ -1070,12 +1070,19 @@ def manager_init() -> None:
   migrate_legacy_bolt_fingerprint(params)
   last_timing = _log_boot_timing("manager_init", "version_params", manager_init_start, last_timing)
 
-  # set dongle id
-  reg_res = register(show_spinner=True)
-  if reg_res:
-    dongle_id = reg_res
+  # set dongle id. Offline privacy mode deliberately avoids registration/auth traffic.
+  offline_privacy = params.get_bool("OfflinePrivacyMode")
+  if offline_privacy:
+    dongle_id = params.get("DongleId") or UNREGISTERED_DONGLE_ID
+    if params.get("DongleId") is None:
+      params.put("DongleId", dongle_id)
+    cloudlog.info("Offline privacy mode: skipping device registration")
   else:
-    raise Exception(f"Registration failed for device {serial}")
+    reg_res = register(show_spinner=True)
+    if reg_res:
+      dongle_id = reg_res
+    else:
+      raise Exception(f"Registration failed for device {serial}")
   last_timing = _log_boot_timing("manager_init", "register", manager_init_start, last_timing)
   os.environ['DONGLE_ID'] = dongle_id  # Needed for swaglog
   os.environ['GIT_ORIGIN'] = build_metadata.openpilot.git_normalized_origin # Needed for swaglog
@@ -1085,8 +1092,9 @@ def manager_init() -> None:
   if not build_metadata.openpilot.is_dirty:
     os.environ['CLEAN'] = '1'
 
-  # init logging
-  sentry.init(sentry.SentryProject.SELFDRIVE)
+  # init crash reporting only when cloud services are allowed
+  if not offline_privacy:
+    sentry.init(sentry.SentryProject.SELFDRIVE)
   cloudlog.bind_global(dongle_id=dongle_id,
                        version=build_metadata.openpilot.version,
                        origin=build_metadata.openpilot.git_normalized_origin,
@@ -1136,6 +1144,8 @@ def manager_thread() -> None:
   last_timing = _log_boot_timing("manager_thread", "params", manager_thread_start, last_timing)
 
   ignore: list[str] = []
+  if params.get_bool("OfflinePrivacyMode"):
+    ignore += ["manage_athenad", "uploader", "statsd", "device_syncd", "galaxy"]
   if params.get("DongleId") in (None, UNREGISTERED_DONGLE_ID):
     ignore += ["manage_athenad", "uploader"]
   if os.getenv("NOBOARD") is not None:
