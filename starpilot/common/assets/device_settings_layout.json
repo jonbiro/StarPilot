@@ -4578,6 +4578,16 @@
         "settings_tier": "simple"
       },
       {
+        "key": "OfflinePrivacyMode",
+        "label": "Offline Privacy Mode",
+        "description": "Disable automatic cloud connectivity while keeping local driving, local logs, and GitHub software updates available. Blocks device registration, Athena remote access, route/log uploads, stats telemetry, crash reporting, StarPilot remote toggle/presence sync, and the Galaxy remote tunnel. Git branch, commit, remote, and modification metadata remain truthful.",
+        "picker_description": "Runs StarPilot locally without automatic cloud telemetry or remote-control services.",
+        "data_type": "bool",
+        "ui_type": "toggle",
+        "parent_key": "DeviceManagement",
+        "settings_tier": "simple"
+      },
+      {
         "key": "NoLogging",
         "label": "Disable Logging",
         "description": "WARNING: This will prevent your drives from being recorded and all data will be unobtainable!\n\nPrevent the device from saving driving data.",
