@@ -61,6 +61,8 @@ def _ensure_stock_dongle_id(params):
 
 
 def sync_konik_dongle_id(params):
+  if params.get_bool("OfflinePrivacyMode"):
+    return
   current_dongle_id = _normalize_dongle_id(params.get("DongleId"))
   konik_dongle_id = _normalize_dongle_id(params.get("KonikDongleId"))
   stock_dongle_id = _ensure_stock_dongle_id(params)
