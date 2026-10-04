@@ -1085,6 +1085,9 @@ def main(exit_event: threading.Event = None):
     cloudlog.exception("failed to set core affinity")
 
   params = Params()
+  if params.get_bool("OfflinePrivacyMode"):
+    cloudlog.info("Offline privacy mode: Athena connection disabled")
+    return
   UploadQueueCache.initialize(upload_queue)
 
   conn_start = None

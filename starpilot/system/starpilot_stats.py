@@ -196,6 +196,9 @@ def is_up_to_date(build_metadata):
   return True
 
 def send_stats():
+  if params.get_bool("OfflinePrivacyMode"):
+    print("Offline privacy mode: StarPilot stats upload disabled")
+    return
   try:
     build_metadata = get_build_metadata()
     starpilot_toggles = get_starpilot_toggles()

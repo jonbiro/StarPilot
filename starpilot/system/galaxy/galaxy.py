@@ -197,6 +197,9 @@ def setup_frpc():
 def main():
   global process
   params = Params()
+  if params.get_bool("OfflinePrivacyMode"):
+    print("Galaxy: Offline privacy mode enabled; remote tunnel disabled.")
+    return
 
   signal.signal(signal.SIGTERM, shutdown)
   signal.signal(signal.SIGINT, shutdown)
