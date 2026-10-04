@@ -72,6 +72,9 @@ def qcomgps(started: bool, params: Params, CP: car.CarParams, starpilot_toggles:
 def always_run(started: bool, params: Params, CP: car.CarParams, starpilot_toggles: SimpleNamespace) -> bool:
   return True
 
+def cloud_services_allowed(started: bool, params: Params, CP: car.CarParams, starpilot_toggles: SimpleNamespace) -> bool:
+  return not params.get_bool("OfflinePrivacyMode")
+
 def only_onroad(started: bool, params: Params, CP: car.CarParams, starpilot_toggles: SimpleNamespace) -> bool:
   return started
 
@@ -198,8 +201,8 @@ procs = [
   PythonProcess("hardwared", "system.hardware.hardwared", always_run),
   PythonProcess("tombstoned", "system.tombstoned", always_run, enabled=not PC),
   PythonProcess("updated", "system.updated.updated", always_run, enabled=not PC),
-  PythonProcess("uploader", "system.loggerd.uploader", allow_uploads, nice=19),
-  PythonProcess("statsd", "system.statsd", always_run),
+  PythonProcess("uploader", "system.loggerd.uploader", and_(cloud_services_allowed, allow_uploads), nice=19),
+  PythonProcess("statsd", "system.statsd", cloud_services_allowed),
   PythonProcess("feedbackd", "selfdrive.ui.feedback.feedbackd", only_onroad),
 
   # debug procs
@@ -214,7 +217,7 @@ procs += [
   PythonProcess("bluetooth_managerd", "starpilot.system.bluetooth.daemon", bluetooth_enabled, enabled=TICI),
   PythonProcess("wheel_controlsd", "starpilot.system.wheel_controls.wheel_controlsd", wheel_controls_enabled, enabled=TICI, nice=19),
   PythonProcess("the_galaxy", "starpilot.system.the_galaxy.the_galaxy", always_run, nice=10),
-  PythonProcess("galaxy", "starpilot.system.galaxy.galaxy", always_run, nice=10),
+  PythonProcess("galaxy", "starpilot.system.galaxy.galaxy", cloud_services_allowed, nice=10),
 ]
 
 device_type = HARDWARE.get_device_type()
@@ -224,7 +227,7 @@ else:
   procs.append(PythonProcess("ui", "selfdrive.ui.ui", always_run, watchdog_max_dt=UI_WATCHDOG_MAX_DT))
 
 procs += [
-  PythonProcess("device_syncd", "starpilot.system.device_syncd", always_run),
+  PythonProcess("device_syncd", "starpilot.system.device_syncd", cloud_services_allowed),
   PythonProcess("starpilot_process", "starpilot.starpilot_process", always_run),
   PythonProcess("mapd", "starpilot.navigation.mapd_wrapper", run_mapd, nice=19),
   PythonProcess("navigationd", "starpilot.navigation.navigationd", run_navigationd, nice=19),
