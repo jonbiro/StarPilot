@@ -70,7 +70,10 @@ class DRIVER_MONITOR_SETTINGS:
     self._EYE_THRESHOLD = 0.65
     self._SG_THRESHOLD = 0.9
     self._BLINK_THRESHOLD = 0.865
+    # Production/on-road phone threshold. Keep comma's safety policy unchanged on road.
     self._PHONE_THRESH = 0.5
+    # Diagnostic-only threshold used by Driver View/demo mode while off road.
+    self._PHONE_THRESH_OFFROAD_TEST = 0.95
     self._POSE_PITCH_THRESHOLD = 0.3133
     self._POSE_PITCH_THRESHOLD_SLACK = 0.3237
     self._POSE_PITCH_THRESHOLD_STRICT = self._POSE_PITCH_THRESHOLD
@@ -236,7 +239,7 @@ class DriverMonitoring:
                                            [self.settings._POSE_YAW_THRESHOLD_SLACK,
                                             self.settings._POSE_YAW_THRESHOLD_STRICT]) / self.settings._POSE_YAW_THRESHOLD
 
-  def _get_distracted_types(self):
+  def _get_distracted_types(self, demo_mode=False):
     self.distracted_types = defaultdict(bool)
 
     if not self.pose.calibrated:
@@ -259,7 +262,8 @@ class DriverMonitoring:
 
     self.distracted_types['pose'] = bool((pitch_error > pitch_threshold) or (yaw_error > yaw_threshold))
     self.distracted_types['eye'] = bool((self.blink.left + self.blink.right)*0.5 > self.settings._BLINK_THRESHOLD)
-    self.distracted_types['phone'] = bool(self.phone_prob > self.settings._PHONE_THRESH)
+    phone_threshold = self.settings._PHONE_THRESH_OFFROAD_TEST if demo_mode else self.settings._PHONE_THRESH
+    self.distracted_types['phone'] = bool(self.phone_prob > phone_threshold)
 
   def _update_states(self, driver_state, cal_rpy, car_speed, op_engaged, lowspeed, demo_mode=False, steering_angle_deg=0.):
     rhd_pred = driver_state.wheelOnRightProb
@@ -301,7 +305,7 @@ class DriverMonitoring:
                       * (driver_data.sunglassesProb < self.settings._SG_THRESHOLD)
     self.phone_prob = driver_data.phoneProb
 
-    self._get_distracted_types()
+    self._get_distracted_types(demo_mode=demo_mode)
     self.driver_distracted = any(self.distracted_types.values()) and driver_data.faceProb > self.settings._FACE_THRESHOLD and self.pose.low_std
     self.driver_distraction_filter.update(self.driver_distracted)
 
