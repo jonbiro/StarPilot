@@ -6,7 +6,6 @@ import uuid
 from pathlib import Path
 from collections import defaultdict
 from datetime import datetime, UTC
-from typing import NoReturn
 
 from openpilot.common.params import Params
 from cereal.messaging import SubMaster
@@ -60,7 +59,7 @@ class StatLog:
     self._send(f"{name}:{value}|{METRIC_TYPE.SAMPLE}")
 
 
-def main() -> NoReturn:
+def main() -> None:
   params = Params()
   if params.get_bool("OfflinePrivacyMode"):
     cloudlog.info("Offline privacy mode: stats collection disabled")
