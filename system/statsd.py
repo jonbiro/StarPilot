@@ -61,7 +61,11 @@ class StatLog:
 
 
 def main() -> NoReturn:
-  dongle_id = Params().get("DongleId")
+  params = Params()
+  if params.get_bool("OfflinePrivacyMode"):
+    cloudlog.info("Offline privacy mode: stats collection disabled")
+    return
+  dongle_id = params.get("DongleId")
   def get_influxdb_line(measurement: str, value: float | dict[str, float],  timestamp: datetime, tags: dict) -> str:
     res = f"{measurement}"
     for k, v in tags.items():
