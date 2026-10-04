@@ -114,6 +114,10 @@ def install_starpilot(build_metadata, params):
   update_boot_logo(starpilot=True, selected_logo=params.get("BootLogo"))
 
 def register_device(build_metadata, params):
+  if params.get_bool("OfflinePrivacyMode"):
+    print("Offline privacy mode: StarPilot backend registration disabled")
+    return
+
   def register_thread():
     dongle_id = params.get("DongleId")
     if isinstance(dongle_id, bytes):
