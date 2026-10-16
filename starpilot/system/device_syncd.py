@@ -59,6 +59,8 @@ def _put_migrated_bool(params, key, legacy_key, value):
 
 
 def _remote_request(method, path, **kwargs):
+  if Params().get_bool("OfflinePrivacyMode"):
+    raise RuntimeError("Offline privacy mode: StarPilot remote sync disabled")
   response = None
   for scope in REMOTE_SYNC_SCOPES:
     response = requests.request(method, f"{STARPILOT_API}/{scope}/{path}", **kwargs)
@@ -68,6 +70,8 @@ def _remote_request(method, path, **kwargs):
 
 
 def check_toggles(started, params, sm=None, boot_run=False):
+  if params.get_bool("OfflinePrivacyMode"):
+    return None
   if not _get_migrated_bool(params, GALAXY_PAIRED_PARAM, LEGACY_GALAXY_PAIRED_PARAM):
     return None
 
@@ -149,6 +153,8 @@ def check_toggles(started, params, sm=None, boot_run=False):
 
 
 def ping_galaxy_presence(interval, parked, started, state_changed):
+  if Params().get_bool("OfflinePrivacyMode"):
+    return
   last_ping = getattr(ping_galaxy_presence, "_last_ping", 0.0)
   now = time.monotonic()
   if not state_changed and (now - last_ping) < interval:
@@ -184,6 +190,8 @@ def ping_galaxy_presence(interval, parked, started, state_changed):
 
 
 def upload_toggles(params):
+  if params.get_bool("OfflinePrivacyMode"):
+    return False
   if not is_url_pingable(STARPILOT_API):
     return False
 
@@ -238,6 +246,9 @@ def upload_toggles(params):
 
 
 def galaxy_thread():
+  if Params().get_bool("OfflinePrivacyMode"):
+    print("Offline privacy mode: StarPilot device sync disabled")
+    return
   rate_keeper = Ratekeeper(1, None)
 
   sm = messaging.SubMaster(["deviceState", "starpilotCarState"])

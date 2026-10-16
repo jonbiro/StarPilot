@@ -16,6 +16,10 @@ from openpilot.system.version import get_build_metadata, get_version
 
 from openpilot.starpilot.common.starpilot_variables import ERROR_LOGS_PATH, params
 
+def privacy_mode_enabled() -> bool:
+  return params.get_bool("OfflinePrivacyMode")
+
+
 class SentryProject(Enum):
   # python project
   SELFDRIVE = "https://7305139359a548fcb348ec09497dc389@bugsink.firestar.link/1"
@@ -25,6 +29,8 @@ class SentryProject(Enum):
 
 def report_tombstone(fn: str, message: str, contents: str) -> None:
   cloudlog.error({'tombstone': message})
+  if privacy_mode_enabled():
+    return
 
   with sentry_sdk.configure_scope() as scope:
     scope.set_extra("tombstone_fn", fn)
@@ -40,6 +46,8 @@ def report_tombstone(fn: str, message: str, contents: str) -> None:
 
 
 def capture_block():
+  if privacy_mode_enabled():
+    return
   with sentry_sdk.push_scope():
     sentry_sdk.capture_message("Blocked user from using the development branch", level='info')
     sentry_sdk.flush()
@@ -48,6 +56,8 @@ def capture_block():
 def capture_message(message: str, *, level: str = "error", tags: dict[str, str] | None = None,
                     extras: dict[str, Any] | None = None, attachment_path: Path | None = None,
                     flush_timeout: float | None = None) -> None:
+  if privacy_mode_enabled():
+    return
   try:
     with sentry_sdk.push_scope() as scope:
       for key, value in (tags or {}).items():
@@ -80,6 +90,9 @@ def capture_exception(*args, crash_log=True, **kwargs) -> None:
   save_exception(exc_text, crash_log)
   cloudlog.error("crash", exc_info=kwargs.get('exc_info', 1))
 
+  if privacy_mode_enabled():
+    return
+
   try:
     with sentry_sdk.push_scope() as scope:
       # Attach qlog for debugging context
@@ -94,6 +107,8 @@ def capture_exception(*args, crash_log=True, **kwargs) -> None:
 
 
 def capture_report(discord_user, report, starpilot_toggles):
+  if privacy_mode_enabled():
+    return
   error_file_path = ERROR_LOGS_PATH / "error.txt"
   error_content = "No error log found."
 
@@ -124,6 +139,8 @@ def capture_flm_tune_submission(submission: dict) -> None:
 
 
 def set_tag(key: str, value: str) -> None:
+  if privacy_mode_enabled():
+    return
   sentry_sdk.set_tag(key, value)
 
 
@@ -142,7 +159,7 @@ def save_exception(exc_text: str, crash_log) -> None:
 
 
 def init(project: SentryProject) -> bool:
-  if PC:
+  if PC or privacy_mode_enabled():
     return False
 
   build_metadata = get_build_metadata()

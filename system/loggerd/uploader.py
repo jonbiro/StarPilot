@@ -242,6 +242,9 @@ def main(exit_event: threading.Event | None = None) -> None:
   clear_locks(Paths.log_root())
 
   params = Params()
+  if params.get_bool("OfflinePrivacyMode"):
+    cloudlog.info("Offline privacy mode: uploader disabled")
+    return
   dongle_id = params.get("DongleId")
 
   if dongle_id is None:

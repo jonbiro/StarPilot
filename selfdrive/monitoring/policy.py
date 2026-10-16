@@ -45,43 +45,47 @@ def starpilot_aol_enabled(sm):
 
 class DRIVER_MONITOR_SETTINGS:
   def __init__(self):
+    # Lenient fork tuning — much harder to trigger, faster to recover.
+    # Vision red ~80s (was 13s), wheeltouch red ~120s (was 25s).
+    # Phone detection disabled, pose/eye thresholds very loose,
+    # lockout needs 10x red / 5x no-response, always 1 min.
     # https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=OJ:L_202501899
-    self._ALERT_MIN_SPEED = 2.8  # 10 km/h
+    self._ALERT_MIN_SPEED = 6.0  # ~22 km/h, was 2.8 (10 km/h)
 
-    self._WHEELTOUCH_POLICY_ALERT_1_TIMEOUT = 5.
-    self._WHEELTOUCH_POLICY_ALERT_2_TIMEOUT = 15.
-    self._WHEELTOUCH_POLICY_ALERT_3_TIMEOUT = 25.
-    self._VISION_POLICY_ALERT_1_TIMEOUT = 5.
-    self._VISION_POLICY_ALERT_2_TIMEOUT = 8.
-    self._VISION_POLICY_ALERT_3_TIMEOUT = 13.
+    self._WHEELTOUCH_POLICY_ALERT_1_TIMEOUT = 25.
+    self._WHEELTOUCH_POLICY_ALERT_2_TIMEOUT = 60.
+    self._WHEELTOUCH_POLICY_ALERT_3_TIMEOUT = 120.
+    self._VISION_POLICY_ALERT_1_TIMEOUT = 25.
+    self._VISION_POLICY_ALERT_2_TIMEOUT = 45.
+    self._VISION_POLICY_ALERT_3_TIMEOUT = 80.
 
     # no response = alert_3 sustained for certain amount of time
-    self._NO_RESPONSE_TIMEOUT = 5.
+    self._NO_RESPONSE_TIMEOUT = 30.
 
-    # lockout specs
-    self._MAX_ALERT_3 = 2
-    self._MAX_NO_RESPONSE = 1
-    self._LOCKOUT_TIMES = [int(60 * n_min / DT_DMON) for n_min in [1, 5, 15, 30]]
+    # lockout specs — lenient: many strikes, always 1 min
+    self._MAX_ALERT_3 = 10
+    self._MAX_NO_RESPONSE = 5
+    self._LOCKOUT_TIMES = [int(60 * n_min / DT_DMON) for n_min in [1, 1, 1, 1]]
 
-    self._TIMEOUT_RECOVERY_FACTOR_MAX = 5.
-    self._TIMEOUT_RECOVERY_FACTOR_MIN = 1.25
+    self._TIMEOUT_RECOVERY_FACTOR_MAX = 10.
+    self._TIMEOUT_RECOVERY_FACTOR_MIN = 3.0
 
-    self._FACE_THRESHOLD = 0.7
-    self._EYE_THRESHOLD = 0.65
-    self._SG_THRESHOLD = 0.9
-    self._BLINK_THRESHOLD = 0.865
-    self._PHONE_THRESH = 0.5
-    self._POSE_PITCH_THRESHOLD = 0.3133
-    self._POSE_PITCH_THRESHOLD_SLACK = 0.3237
+    self._FACE_THRESHOLD = 0.5
+    self._EYE_THRESHOLD = 0.9
+    self._SG_THRESHOLD = 0.5
+    self._BLINK_THRESHOLD = 0.99
+    self._PHONE_THRESH = 1.01  # disabled: phoneProb max is 1.0
+    self._POSE_PITCH_THRESHOLD = 0.6
+    self._POSE_PITCH_THRESHOLD_SLACK = 0.65
     self._POSE_PITCH_THRESHOLD_STRICT = self._POSE_PITCH_THRESHOLD
-    self._POSE_YAW_THRESHOLD = 0.4020
-    self._POSE_YAW_THRESHOLD_SLACK = 0.5042
+    self._POSE_YAW_THRESHOLD = 0.8
+    self._POSE_YAW_THRESHOLD_SLACK = 0.9
     self._POSE_YAW_THRESHOLD_STRICT = self._POSE_YAW_THRESHOLD
     self._POSE_YAW_MIN_STEER_DEG = 30
-    self._POSE_YAW_STEER_FACTOR = 0.15
-    self._POSE_YAW_STEER_MAX_OFFSET = 0.3927
+    self._POSE_YAW_STEER_FACTOR = 0.3
+    self._POSE_YAW_STEER_MAX_OFFSET = 0.6
     self._PITCH_NATURAL_OFFSET = 0.011 # initial value before offset is learned
-    self._PITCH_NATURAL_THRESHOLD = 0.449
+    self._PITCH_NATURAL_THRESHOLD = 0.8
     self._YAW_NATURAL_OFFSET = 0.075 # initial value before offset is learned
     self._PITCH_NATURAL_VAR = 3*0.01
     self._YAW_NATURAL_VAR = 3*0.05
@@ -90,12 +94,12 @@ class DRIVER_MONITOR_SETTINGS:
     self._YAW_MAX_OFFSET = 0.289
     self._YAW_MIN_OFFSET = -0.0246
 
-    self._DCAM_UNCERTAIN_ALERT_THRESHOLD = 0.1
-    self._DCAM_UNCERTAIN_ALERT_COUNT = int(60  / DT_DMON)
+    self._DCAM_UNCERTAIN_ALERT_THRESHOLD = 0.4
+    self._DCAM_UNCERTAIN_ALERT_COUNT = int(300  / DT_DMON)
     self._DCAM_UNCERTAIN_RESET_COUNT = int(2  / DT_DMON)
-    self._HI_STD_THRESHOLD = 0.3
-    self._HI_STD_FALLBACK_TIME = int(10  / DT_DMON)  # fall back to wheel touch if model is uncertain for 10s
-    self._DISTRACTED_FILTER_TS = 0.25  # 0.6Hz
+    self._HI_STD_THRESHOLD = 0.6
+    self._HI_STD_FALLBACK_TIME = int(60  / DT_DMON)  # fall back to wheel touch if model is uncertain for 60s
+    self._DISTRACTED_FILTER_TS = 0.25  # keep stock filter so tests/timing stay consistent; leniency comes from timeouts/thresholds
 
     self._POSE_CALIB_MIN_SPEED = 13  # 30 mph
     self._POSE_OFFSET_MIN_COUNT = int(60 / DT_DMON)  # valid data counts before calibration completes, 1min cumulative
@@ -365,7 +369,7 @@ class DriverMonitoring:
     always_on_exemption = always_on_valid and not op_engaged and _reaching_alert_3
 
     if self.awareness > 0 and \
-       ((self.driver_distraction_filter.x < 0.37 and self.face_detected and self.pose.low_std) or lowspeed_exemption):
+       ((self.driver_distraction_filter.x < 0.50 and self.face_detected and self.pose.low_std) or lowspeed_exemption):
       if self.driver_interacting:
         self._reset_awareness()
         return
@@ -378,7 +382,7 @@ class DriverMonitoring:
       if self.awareness > self.threshold_alert_2:
         return
 
-    certainly_distracted = self.driver_distraction_filter.x > 0.63 and self.driver_distracted and self.face_detected
+    certainly_distracted = self.driver_distraction_filter.x > 0.85 and self.driver_distracted and self.face_detected
     maybe_distracted = self.is_model_uncertain or not self.face_detected
 
     if certainly_distracted or maybe_distracted:

@@ -137,6 +137,8 @@ def check_assets(now, model_manager, theme_manager, thread_manager, params, para
     thread_manager.run_with_lock(update_maps, (now, params, params_memory, True))
 
 def sync_drive_stats(params, session):
+  if params.get_bool("OfflinePrivacyMode"):
+    return
   try:
     dongle_id = params.get("DongleId")
     if isinstance(dongle_id, bytes):

@@ -3,6 +3,7 @@ import os
 import requests
 from datetime import datetime, timedelta, UTC
 from openpilot.system.hardware.hw import Paths
+from openpilot.common.params import Params
 from openpilot.system.version import get_version
 
 from openpilot.starpilot.common.starpilot_utilities import use_konik_server
@@ -45,6 +46,8 @@ class Api:
 
 
 def api_get(endpoint, method='GET', timeout=None, access_token=None, session=None, **params):
+  if Params().get_bool("OfflinePrivacyMode"):
+    raise RuntimeError("Offline privacy mode: comma/Konik API access disabled")
   headers = {}
   if access_token is not None:
     headers['Authorization'] = "JWT " + access_token

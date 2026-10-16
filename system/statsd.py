@@ -6,7 +6,6 @@ import uuid
 from pathlib import Path
 from collections import defaultdict
 from datetime import datetime, UTC
-from typing import NoReturn
 
 from openpilot.common.params import Params
 from cereal.messaging import SubMaster
@@ -60,8 +59,12 @@ class StatLog:
     self._send(f"{name}:{value}|{METRIC_TYPE.SAMPLE}")
 
 
-def main() -> NoReturn:
-  dongle_id = Params().get("DongleId")
+def main() -> None:
+  params = Params()
+  if params.get_bool("OfflinePrivacyMode"):
+    cloudlog.info("Offline privacy mode: stats collection disabled")
+    return
+  dongle_id = params.get("DongleId")
   def get_influxdb_line(measurement: str, value: float | dict[str, float],  timestamp: datetime, tags: dict) -> str:
     res = f"{measurement}"
     for k, v in tags.items():
