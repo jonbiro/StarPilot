@@ -259,7 +259,7 @@ class Uploader:
 
 
   def step(self, network_type: int, metered: bool) -> bool | None:
-    if phone_uplink_active():
+    if self.params.get_bool("NoUploads") or phone_uplink_active():
       return None
     d = self.next_file_to_upload(metered)
     if d is None:

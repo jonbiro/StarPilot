@@ -34,6 +34,11 @@ def logging(started: bool, params: Params, CP: car.CarParams) -> bool:
   return started and run
 
 
+def allow_uploads(started: bool, params: Params, CP: car.CarParams) -> bool:
+  # NoUploads (default on) stops any data egress; always-allow can't override it.
+  return not params.get_bool("NoUploads")
+
+
 def ublox_available() -> bool:
   return os.path.exists('/dev/ttyHS0') and not os.path.exists('/persist/comma/use-quectel-gps')
 
@@ -236,7 +241,7 @@ procs = [
   PythonProcess("usage_stats", "openpilot.starpilot.analytics.runtime", always_run, enabled=COMMA_HARDWARE),
   PythonProcess("tombstoned", "openpilot.system.tombstoned", always_run, enabled=not PC),
   PythonProcess("updated", "openpilot.system.updated.updated", only_offroad, enabled=not PC),
-  PythonProcess("uploader", "openpilot.system.loggerd.uploader", always_run),
+  PythonProcess("uploader", "openpilot.system.loggerd.uploader", allow_uploads),
   # debug procs
   PythonProcess("webrtcd", "openpilot.system.webrtc.webrtcd", or_(livestream, notcar)),
   PythonProcess("joystick", "openpilot.tools.joystick.joystick_control", and_(joystick, iscar)),
